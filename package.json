@@ -1,8 +1,8 @@
 {
-  "name": "aws-cdk-route53",
+  "name": "aws-cdk-cognito",
   "version": "0.1.0",
   "bin": {
-    "cdk-test-ec2": "bin/cdk-route53.js"
+    "cdk-test-ec2": "bin/cdk-cognito.js"
   },
   "scripts": {
     "build": "tsc",

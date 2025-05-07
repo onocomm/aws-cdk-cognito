@@ -1,19 +1,21 @@
-# AWS CDK Route53 サンプルプロジェクト
+# AWS CDK Cognito サンプルプロジェクト
 
-このリポジトリは、AWS CDKを使用してRoute53の設定を行う方法を示すサンプルプロジェクトです。新規ホストゾーンの作成と様々なタイプのDNSレコードを設定する例を含んでいます。
+このリポジトリは、AWS CDKを使用してAmazon Cognitoのユーザープールとアイデンティティプールを設定する方法を示すサンプルプロジェクトです。認証・認可基盤をインフラストラクチャー・アズ・コードで管理する例を含んでいます。
 
 ## 概要
 
 このプロジェクトでは、以下のリソースと設定を AWS CDK を使って定義しています：
 
-- Route53 ホストゾーンの新規作成
-- 様々なタイプのDNSレコードの設定：
-  - Aレコード（IPアドレス指定）
-  - Aレコード（CloudFrontへのエイリアス）
-  - Aレコード（ALBへのエイリアス）
-  - CNAMEレコード
-  - MXレコード
-  - TXTレコード（SPF、ドメイン検証など）
+- Cognito ユーザープールの作成と設定
+  - メールアドレスによるサインイン
+  - パスワードポリシーの設定
+  - Amazon SES を使用したメール送信設定
+- ユーザープールクライアントの設定
+  - 各種認証フローの有効化（SRP、管理者認証、カスタム認証）
+- Cognito アイデンティティプールの作成
+  - ユーザープールをIDP（Identity Provider）として設定
+- IAM ロールの設定
+  - 認証済みユーザー用のロールと権限設定
 
 ## 前提条件
 
@@ -23,13 +25,14 @@
 - Node.js (バージョン 14.x 以上)
 - AWS CDK CLI (バージョン 2.x)
 - AWS CLI（設定済み）
+- Amazon SES（設定済み、メール送信元として使用）
 
 ## インストール方法
 
 ```bash
 # リポジトリをクローン
 git clone <リポジトリURL>
-cd aws-cdk-route53
+cd aws-cdk-cognito
 
 # 依存関係をインストール
 npm install
@@ -55,93 +58,102 @@ npx cdk synth
 npx cdk deploy
 ```
 
-> **注意**: 実際にデプロイすると、Route53ホストゾーンが作成され、AWS アカウントに課金が発生する可能性があります。
+> **注意**: 実際にデプロイすると、Cognitoリソースが作成され、AWS アカウントに課金が発生する可能性があります。
 
 ## 実装例の解説
 
-### 新規ホストゾーンの作成
+### ユーザープールの作成
 
 ```typescript
-const hostedZone = new route53.HostedZone(this, 'NewHostedZone', {
-  zoneName: 'xxxx.com',
+const userPool = new cognito.UserPool(this, 'UserPool', {
+  selfSignUpEnabled: true,
+  signInAliases: {
+    email: true,
+  },
+  passwordPolicy: {
+    minLength: 8,
+    requireDigits: true,
+    requireLowercase: false,
+    requireUppercase: false,
+    requireSymbols: false,
+    tempPasswordValidity: Duration.days(7),
+  },
+  email: cognito.UserPoolEmail.withSES({
+    sesRegion: 'ap-northeast-1',
+    fromEmail: 'no-reply@owner-order.com',
+    fromName: 'owner-system',
+    configurationSetName: 'default',
+  }),
+  mfa: cognito.Mfa.OFF,
+  deviceTracking: {
+    challengeRequiredOnNewDevice: false,
+    deviceOnlyRememberedOnUserPrompt: false,
+  },
 });
 ```
 
-### 既存ホストゾーンの参照（コメントアウト済み）
+### ユーザープールクライアントの設定
 
 ```typescript
-const hostedZone = route53.HostedZone.fromLookup(this, 'ExistingHostedZone', {
-  domainName: 'xxxx.com',
+const userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
+  userPool,
+  authFlows: {
+    userSrp: true,                // SRP認証
+    adminUserPassword: true,      // 管理者認証
+    custom: true,                 // カスタム認証
+    userPassword: false,          // パスワード認証（無効）
+  },
+  refreshTokenValidity: Duration.days(30), // 更新トークンの有効期間
 });
 ```
 
-### IPアドレスを指定したAレコード
+### アイデンティティプールの作成
 
 ```typescript
-new route53.ARecord(this, 'ARecord', {
-  zone: hostedZone,
-  recordName: 'www',
-  target: route53.RecordTarget.fromIpAddresses('192.0.2.1', '192.0.2.2'),
-  ttl: Duration.minutes(5),
-  comment: 'Webサーバーへの直接アクセス用レコード',
-});
-```
-
-### CloudFrontディストリビューションへのAレコード（エイリアス）
-
-```typescript
-new route53.ARecord(this, 'CloudFrontAliasRecord', {
-  zone: hostedZone,
-  recordName: 'cloudfront-staging',
-  target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distribution)),
-});
-```
-
-### ALBへのAレコード（エイリアス）
-
-```typescript
-new route53.ARecord(this, 'ALBAliasRecord', {
-  zone: hostedZone,
-  recordName: 'staging-elb',
-  target: route53.RecordTarget.fromAlias(new targets.LoadBalancerTarget(alb)),
-});
-```
-
-### CNAMEレコード
-
-```typescript
-new route53.CnameRecord(this, 'CnameRecord', {
-  zone: hostedZone,
-  recordName: 'mail',
-  domainName: 'mail-server.example.com.',
-  ttl: Duration.hours(1),
-});
-```
-
-### MXレコード
-
-```typescript
-new route53.MxRecord(this, 'MxRecord', {
-  zone: hostedZone,
-  values: [
-    { priority: 10, hostName: 'mail1.example.com.' },
-    { priority: 20, hostName: 'mail2.example.com.' },
+const identityPool = new cognito.CfnIdentityPool(this, 'IdentityPool', {
+  identityPoolName: 'MyIdentityPool',
+  cognitoIdentityProviders: [
+    {
+      clientId: userPoolClient.userPoolClientId,
+      providerName: `cognito-idp.${this.region}.amazonaws.com/${userPool.userPoolId}`,
+    },
   ],
-  ttl: Duration.hours(4),
+  allowUnauthenticatedIdentities: false,
 });
 ```
 
-### TXTレコード
+### 認証済みユーザー用IAMロールの設定
 
 ```typescript
-new route53.TxtRecord(this, 'TxtRecord', {
-  zone: hostedZone,
-  recordName: '@',
-  values: [
-    'v=spf1 include:_spf.example.com -all',
-    'google-site-verification=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-  ],
-  ttl: Duration.hours(24),
+const authenticatedRole = new iam.Role(this, 'AuthenticatedRole', {
+  assumedBy: new iam.FederatedPrincipal(
+    'cognito-identity.amazonaws.com',
+    {
+      StringEquals: {
+        'cognito-identity.amazonaws.com:aud': identityPool.ref,
+      },
+      'ForAnyValue:StringLike': {
+        'cognito-identity.amazonaws.com:amr': 'authenticated',
+      },
+    },
+    'sts:AssumeRoleWithWebIdentity'
+  ),
+});
+
+// ロールにポリシーをアタッチ
+authenticatedRole.addManagedPolicy(
+  iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3ReadOnlyAccess')
+);
+```
+
+### アイデンティティプールとIAMロールの関連付け
+
+```typescript
+new cognito.CfnIdentityPoolRoleAttachment(this, 'IdentityPoolRoleAttachment', {
+  identityPoolId: identityPool.ref,
+  roles: {
+    authenticated: authenticatedRole.roleArn,
+  },
 });
 ```
 
@@ -149,9 +161,11 @@ new route53.TxtRecord(this, 'TxtRecord', {
 
 実際の環境で使用する場合は、以下の点を変更してください：
 
-1. `lib/cdk-route53-stack.ts` の `zoneName` を実際のドメイン名に変更
-2. 各レコードの `recordName` と `target` 値を実際の値に変更
-3. CloudFront や ALB の設定を実際の環境に合わせて変更
+1. メール設定を実際の環境に合わせて調整（SESの設定や送信元アドレスなど）
+2. パスワードポリシーをセキュリティ要件に合わせて変更
+3. ユーザープールクライアントの認証フローを要件に合わせて設定
+4. IAMロールとポリシーを実際のアプリケーション要件に合わせて変更
+5. 必要に応じてソーシャルIDプロバイダーを追加
 
 ## クリーンアップ
 
@@ -161,13 +175,12 @@ new route53.TxtRecord(this, 'TxtRecord', {
 npx cdk destroy
 ```
 
-> **注意**: ホストゾーンを削除する前に、そのゾーンに含まれるすべてのレコードが削除されていることを確認してください。
-
 ## 参考リソース
 
 - [AWS CDK ドキュメント](https://docs.aws.amazon.com/cdk/latest/guide/home.html)
-- [AWS Route53 ドキュメント](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/Welcome.html)
-- [AWS CDK API リファレンス - Route53](https://docs.aws.amazon.com/cdk/api/latest/docs/aws-route53-readme.html)
+- [Amazon Cognito ドキュメント](https://docs.aws.amazon.com/cognito/latest/developerguide/what-is-amazon-cognito.html)
+- [AWS CDK API リファレンス - Cognito](https://docs.aws.amazon.com/cdk/api/latest/docs/aws-cognito-readme.html)
+- [Amazon SES ドキュメント](https://docs.aws.amazon.com/ses/latest/dg/Welcome.html)
 
 ## ライセンス
 
