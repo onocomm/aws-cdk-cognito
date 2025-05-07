@@ -7,14 +7,20 @@
 このプロジェクトでは、以下のリソースと設定を AWS CDK を使って定義しています：
 
 - Cognito ユーザープールの作成と設定
+  - ユーザープール名の指定
   - メールアドレスによるサインイン
   - パスワードポリシーの設定
   - Amazon SES を使用したメール送信設定
+  - リソース削除ポリシーの設定
 - ユーザープールクライアントの設定
+  - クライアント名の指定
   - 各種認証フローの有効化（SRP、管理者認証、カスタム認証）
+  - ユーザー存在エラーの防止（セキュリティ対策）
 - Cognito アイデンティティプールの作成
+  - アイデンティティプール名の指定
   - ユーザープールをIDP（Identity Provider）として設定
 - IAM ロールの設定
+  - カスタムロール名の指定
   - 認証済みユーザー用のロールと権限設定
 
 ## 前提条件
@@ -62,10 +68,24 @@ npx cdk deploy
 
 ## 実装例の解説
 
+### 基本設定の変数化
+
+```typescript
+const UserPoolName = 'example system';
+const UserPoolClientName = 'example system';
+const IdentityPoolName = 'example system';
+const SESRegion = 'ap-northeast-1';
+const EmailAddress = 'no-reply@example.com';
+const EmailName = 'example system';
+const ConfigurationSetName = 'default';
+const RoleName = 'Cognito_exampleAuth_Role';
+```
+
 ### ユーザープールの作成
 
 ```typescript
 const userPool = new cognito.UserPool(this, 'UserPool', {
+  userPoolName: UserPoolName,
   selfSignUpEnabled: true,
   signInAliases: {
     email: true,
@@ -79,16 +99,12 @@ const userPool = new cognito.UserPool(this, 'UserPool', {
     tempPasswordValidity: Duration.days(7),
   },
   email: cognito.UserPoolEmail.withSES({
-    sesRegion: 'ap-northeast-1',
-    fromEmail: 'no-reply@owner-order.com',
-    fromName: 'owner-system',
-    configurationSetName: 'default',
+    sesRegion: SESRegion,
+    fromEmail: EmailAddress,
+    fromName: EmailName,
+    configurationSetName: ConfigurationSetName,
   }),
-  mfa: cognito.Mfa.OFF,
-  deviceTracking: {
-    challengeRequiredOnNewDevice: false,
-    deviceOnlyRememberedOnUserPrompt: false,
-  },
+  removalPolicy: RemovalPolicy.DESTROY,
 });
 ```
 
@@ -97,6 +113,8 @@ const userPool = new cognito.UserPool(this, 'UserPool', {
 ```typescript
 const userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
   userPool,
+  userPoolClientName: UserPoolClientName,
+  preventUserExistenceErrors: true, // ユーザー存在エラーの防止を有効化
   authFlows: {
     userSrp: true,                // SRP認証
     adminUserPassword: true,      // 管理者認証
@@ -111,7 +129,7 @@ const userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
 
 ```typescript
 const identityPool = new cognito.CfnIdentityPool(this, 'IdentityPool', {
-  identityPoolName: 'MyIdentityPool',
+  identityPoolName: IdentityPoolName,
   cognitoIdentityProviders: [
     {
       clientId: userPoolClient.userPoolClientId,
@@ -126,6 +144,7 @@ const identityPool = new cognito.CfnIdentityPool(this, 'IdentityPool', {
 
 ```typescript
 const authenticatedRole = new iam.Role(this, 'AuthenticatedRole', {
+  roleName: RoleName, // 変数からロール名を指定
   assumedBy: new iam.FederatedPrincipal(
     'cognito-identity.amazonaws.com',
     {
@@ -157,13 +176,26 @@ new cognito.CfnIdentityPoolRoleAttachment(this, 'IdentityPoolRoleAttachment', {
 });
 ```
 
+## セキュリティ機能
+
+### ユーザー存在エラーの防止
+
+`preventUserExistenceErrors: true` を設定することで、ユーザー列挙攻撃（ユーザー名の存在を調査する攻撃）を防止できます。この設定が有効な場合、ユーザーが存在しない場合でも一般的なエラーメッセージが返され、ユーザーの存在有無を隠匿します。
+
+### 削除ポリシー
+
+`removalPolicy: RemovalPolicy.DESTROY` を設定することで、CDKスタックを削除する際にCognitoリソースも一緒に削除されます。本番環境では `RemovalPolicy.RETAIN` に変更することで、誤ってユーザーデータを失うことを防止できます。
+
 ## カスタマイズ方法
 
 実際の環境で使用する場合は、以下の点を変更してください：
 
-1. メール設定を実際の環境に合わせて調整（SESの設定や送信元アドレスなど）
+1. 変数セクションの値を実際の環境に合わせて変更
+   - UserPoolName, UserPoolClientName, IdentityPoolName
+   - EmailAddress, EmailName
+   - RoleName
 2. パスワードポリシーをセキュリティ要件に合わせて変更
-3. ユーザープールクライアントの認証フローを要件に合わせて設定
+3. 本番環境では `removalPolicy` を `RemovalPolicy.RETAIN` に設定
 4. IAMロールとポリシーを実際のアプリケーション要件に合わせて変更
 5. 必要に応じてソーシャルIDプロバイダーを追加
 

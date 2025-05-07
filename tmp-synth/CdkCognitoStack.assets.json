@@ -1,0 +1,20 @@
+{
+  "version": "39.0.0",
+  "files": {
+    "0533122a57f2d46690712dcdd1061eec8a4fef73f286fc9b866963840969f941": {
+      "source": {
+        "path": "CdkCognitoStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "892293659737-ap-northeast-1": {
+          "bucketName": "cdk-hnb659fds-assets-892293659737-ap-northeast-1",
+          "objectKey": "0533122a57f2d46690712dcdd1061eec8a4fef73f286fc9b866963840969f941.json",
+          "region": "ap-northeast-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::892293659737:role/cdk-hnb659fds-file-publishing-role-892293659737-ap-northeast-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

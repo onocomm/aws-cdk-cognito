@@ -1,0 +1,113 @@
+{
+  "version": "39.0.0",
+  "artifacts": {
+    "CdkCognitoStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "CdkCognitoStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "CdkCognitoStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://892293659737/ap-northeast-1",
+      "properties": {
+        "templateFile": "CdkCognitoStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::892293659737:role/cdk-hnb659fds-deploy-role-892293659737-ap-northeast-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::892293659737:role/cdk-hnb659fds-cfn-exec-role-892293659737-ap-northeast-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-892293659737-ap-northeast-1/1bb1a6c1c975cd882f221712544e997cdd4caa0b100c54aeca4d93935635435b.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "CdkCognitoStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::892293659737:role/cdk-hnb659fds-lookup-role-892293659737-ap-northeast-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "CdkCognitoStack.assets"
+      ],
+      "metadata": {
+        "/CdkCognitoStack/UserPool/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPool6BA7E5F2"
+          }
+        ],
+        "/CdkCognitoStack/UserPoolClient/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolClient2F5918F7"
+          }
+        ],
+        "/CdkCognitoStack/IdentityPool": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "IdentityPool"
+          }
+        ],
+        "/CdkCognitoStack/AuthenticatedRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthenticatedRole86104F1A"
+          }
+        ],
+        "/CdkCognitoStack/IdentityPoolRoleAttachment": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "IdentityPoolRoleAttachment"
+          }
+        ],
+        "/CdkCognitoStack/UserPoolId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolId"
+          }
+        ],
+        "/CdkCognitoStack/UserPoolClientId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolClientId"
+          }
+        ],
+        "/CdkCognitoStack/IdentityPoolId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "IdentityPoolId"
+          }
+        ],
+        "/CdkCognitoStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/CdkCognitoStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/CdkCognitoStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "CdkCognitoStack"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  }
+}

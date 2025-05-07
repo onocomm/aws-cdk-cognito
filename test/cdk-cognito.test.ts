@@ -14,12 +14,12 @@ test('Cognito Resources Created', () => {
   // ユーザープールが正しく作成されるか検証
   template.resourceCountIs('AWS::Cognito::UserPool', 1);
   template.hasResourceProperties('AWS::Cognito::UserPool', {
+    UserPoolName: 'example system',
     AutoVerifiedAttributes: ['email'],
     EmailConfiguration: {
       ConfigurationSet: 'default',
       EmailSendingAccount: 'DEVELOPER',
-      From: 'no-reply@owner-order.com',
-      FromEmailAddress: 'owner-system <no-reply@owner-order.com>',
+      From: 'example system <no-reply@example.com>',
       SourceArn: Match.anyValue(),
     },
     MfaConfiguration: 'OFF',
@@ -39,6 +39,8 @@ test('Cognito Resources Created', () => {
   // ユーザープールクライアントが正しく作成されるか検証
   template.resourceCountIs('AWS::Cognito::UserPoolClient', 1);
   template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
+    ClientName: 'example system',
+    PreventUserExistenceErrors: 'ENABLED',
     AuthSessionValidity: Match.absent(),
     ExplicitAuthFlows: [
       'ALLOW_USER_SRP_AUTH',
@@ -59,12 +61,13 @@ test('Cognito Resources Created', () => {
         ProviderName: Match.anyValue(),
       }
     ]),
-    IdentityPoolName: 'MyIdentityPool',
+    IdentityPoolName: 'example system',
   });
 
   // IAMロールが正しく作成されるか検証
   template.resourceCountIs('AWS::IAM::Role', 1);
   template.hasResourceProperties('AWS::IAM::Role', {
+    RoleName: 'Cognito_exampleAuth_Role',
     AssumeRolePolicyDocument: {
       Statement: [
         {

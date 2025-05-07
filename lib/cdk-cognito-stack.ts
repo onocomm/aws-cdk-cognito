@@ -1,4 +1,4 @@
-import { Stack, StackProps, Duration, CfnOutput } from 'aws-cdk-lib';
+import { Stack, StackProps, RemovalPolicy, Duration, CfnOutput } from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
@@ -7,11 +7,23 @@ export class CdkCognitoStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
 
+    const UserPoolName = 'example system';
+    const UserPoolClientName = 'example system';
+    const IdentityPoolName = 'example system';
+    const SESRegion = 'ap-northeast-1';
+    const EmailAddress = 'no-reply@example.com';
+    const EmailName = 'example system';
+    const ConfigurationSetName = 'default';
+    const RoleName = 'Cognito_exampleAuth_Role';
+
     // ユーザープールの作成
     const userPool = new cognito.UserPool(this, 'UserPool', {
+
+      userPoolName: UserPoolName,
+
       // 自己サインアップの有効化
-      selfSignUpEnabled: true,
-      
+      selfSignUpEnabled: true,      
+
       // ユーザー名属性としてメールを使用
       signInAliases: {
         email: true,
@@ -27,27 +39,23 @@ export class CdkCognitoStack extends Stack {
         tempPasswordValidity: Duration.days(7),
       },
       
-      // メール設定
+      // メール設定（SESのメールアドレスによる検証が必要※ドメイン名の認証ではNG）
       email: cognito.UserPoolEmail.withSES({
-        sesRegion: 'ap-northeast-1', // 東京リージョン
-        fromEmail: 'no-reply@owner-order.com',
-        fromName: 'owner-system',
-        configurationSetName: 'default',
+        sesRegion: SESRegion,
+        fromEmail: EmailAddress,
+        fromName: EmailName,
+        configurationSetName: ConfigurationSetName,
       }),
+
+      removalPolicy: RemovalPolicy.DESTROY,
       
-      // MFAなし
-      mfa: cognito.Mfa.OFF,
-      
-      // デバイス追跡なし
-      deviceTracking: {
-        challengeRequiredOnNewDevice: false,
-        deviceOnlyRememberedOnUserPrompt: false,
-      },
     });
 
     // ユーザープールクライアントの作成
     const userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
       userPool,
+      userPoolClientName: UserPoolClientName,
+      preventUserExistenceErrors: true, // ユーザー存在エラーの防止を有効化
       // 認証フローの設定
       authFlows: {
         userSrp: true,                // SRP認証
@@ -61,7 +69,7 @@ export class CdkCognitoStack extends Stack {
     // アイデンティティプールの作成
     const identityPool = new cognito.CfnIdentityPool(this, 'IdentityPool', {
       // アイデンティティプール名
-      identityPoolName: 'MyIdentityPool',
+      identityPoolName: IdentityPoolName,
       
       // Cognito認証プロバイダーの設定
       cognitoIdentityProviders: [
@@ -71,12 +79,13 @@ export class CdkCognitoStack extends Stack {
         },
       ],
       
-      // 未認証アイデンティティの許可（今回は許可しない）
+      // 未認証アイデンティティの許可
       allowUnauthenticatedIdentities: false,
     });
 
     // 認証済みロールの作成
     const authenticatedRole = new iam.Role(this, 'AuthenticatedRole', {
+      roleName: RoleName,
       assumedBy: new iam.FederatedPrincipal(
         'cognito-identity.amazonaws.com',
         {
@@ -119,5 +128,6 @@ export class CdkCognitoStack extends Stack {
       value: identityPool.ref,
       description: 'Identity Pool ID',
     });
+    
   }
 }
