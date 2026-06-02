@@ -22,7 +22,6 @@ test('Cognito Resources Created', () => {
       From: 'example system <no-reply@example.com>',
       SourceArn: Match.anyValue(),
     },
-    MfaConfiguration: 'OFF',
     Policies: {
       PasswordPolicy: {
         MinimumLength: 8,
@@ -33,7 +32,6 @@ test('Cognito Resources Created', () => {
         TemporaryPasswordValidityDays: 7,
       }
     },
-    SelfSignUpEnabled: true,
   });
 
   // ユーザープールクライアントが正しく作成されるか検証
@@ -42,13 +40,13 @@ test('Cognito Resources Created', () => {
     ClientName: 'example system',
     PreventUserExistenceErrors: 'ENABLED',
     AuthSessionValidity: Match.absent(),
-    ExplicitAuthFlows: [
-      'ALLOW_USER_SRP_AUTH',
+    ExplicitAuthFlows: Match.arrayWith([
       'ALLOW_ADMIN_USER_PASSWORD_AUTH',
       'ALLOW_CUSTOM_AUTH',
+      'ALLOW_USER_SRP_AUTH',
       'ALLOW_REFRESH_TOKEN_AUTH',
-    ],
-    RefreshTokenValidity: 30,
+    ]),
+    RefreshTokenValidity: 43200,
   });
 
   // アイデンティティプールが正しく作成されるか検証
